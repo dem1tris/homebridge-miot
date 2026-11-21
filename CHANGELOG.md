@@ -8,8 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Fixed IJAI v18 Matter room discovery, cleaning modes, pause and resume using the existing MiCloud transport. Mode and room selection now survive restarts.
-
+- Fixed Matter cleaning modes and local room cleaning, pause and resume for `ijai.vacuum.v18`. Room discovery can use uploaded MiCloud maps.
+- Fixed Matter robot cleaners losing their selected cleaning mode and rooms after a restart.
 
 
 ## [2.2.0] - 2026-11-19

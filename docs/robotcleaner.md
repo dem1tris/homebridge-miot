@@ -7,8 +7,8 @@
   - `local` - Uses local MIOT only.
   - `cloud` - Uses MiCloud only and requires MiCloud credentials or a cached session.
 - `matterHomeKitDockSwitch` - Adds a momentary HomeKit **Return to Dock** switch alongside the Matter robot. Default: `false`.
-- `matterRoomDiscovery` - `auto` or `disabled`. Default: `auto`. Tries local MIOT commands. The optional MiCloud map fallback below runs when local discovery returns no rooms. IJAI v18 uses the uploaded map instead of its incomplete local room list.
-- `matterRoomDiscoveryMiCloud` - Allows discovery to download Dreame or IJAI v18 saved maps through MiCloud. Default: `false`. Requires a local connection for the map reference and configured MiCloud credentials or an enabled cached session. IJAI v18 control commands do not require MiCloud when using a local connection.
+- `matterRoomDiscovery` - `auto` or `disabled`. Default: `auto`. Enables supported room discovery methods. MiCloud map downloads require the option below.
+- `matterRoomDiscoveryMiCloud` - Allows automatic discovery to download Dreame or IJAI v18 saved maps through MiCloud. Default: `false`. Requires a local connection for the map reference and configured MiCloud credentials or an enabled cached session. Robot control continues to use the selected connection.
 - `matterRoomDiscoveryInterval` - How often to refresh room discovery, in hours. Default: `6`.
 - `matterRooms` - Optional room definitions or name overrides for Matter room cleaning. Each entry can contain `id`, `name`, `mapId`, and `areaType`.
 
@@ -43,7 +43,7 @@ When the robot reports charging complete, or reports 100% while charging, its Ma
 
 Matter room discovery is capability-driven rather than limited to one brand. The plugin uses MIOT map room-list actions or readable room metadata when a robot advertises them, plus the legacy `get_room_mapping` method for Roborock/Rockrobo models. Discovery stays local-only by default to avoid MiCloud rate limits; if a discovered room has no name, the plugin uses a stable label such as `Room 80001026443`.
 
-#### Automatic Dreame saved-map discovery
+#### Automatic saved-map room discovery
 
 Some Dreame robots, including the D9 (`dreame.vacuum.p2009`), expose a saved-map reference through `map:mult-map-info` instead of a readable room list. Enable **Allow MiCloud map discovery** under **Matter Settings → Advanced Matter Settings**, or add:
 
@@ -52,35 +52,15 @@ Some Dreame robots, including the D9 (`dreame.vacuum.p2009`), expose a saved-map
 "matterRoomDiscoveryMiCloud": true
 ```
 
-Configure `micloud.country` to match the Xiaomi Home server region (for example, `us`), and provide MiCloud credentials or cache a session using the plugin UI with `micloud.useCachedSession` enabled. The plugin reads the map reference locally, downloads the saved map list through that existing account, and decodes the room names from the compressed map metadata. This supports embedded, unencrypted Dreame saved maps; encrypted maps and lists requiring separate map-object downloads remain unsupported.
+Configure `micloud.country` to match the Xiaomi Home server region (for example, `us`), and provide MiCloud credentials or cache a session using the plugin UI with `micloud.useCachedSession` enabled. The plugin reads the map reference locally, downloads the saved map list through that existing account, and decodes the room names from the compressed map metadata. This supports embedded, unencrypted Dreame saved maps; encrypted Dreame maps and lists requiring separate map-object downloads remain unsupported.
 
-Only the map identified by `curr_id` is used. This value matches the binary map header ID, **not** the map's position or slot ID in the list. Room segment IDs are scoped to that active map, so rooms from other floors are not combined. Discovery populates the Matter room cache automatically; no `matterRooms` entries or edits to `config.json` are needed. Existing `matterRooms` entries still act as manual definitions/name overrides.
+Dreame discovery uses only the map identified by `curr_id`. This value matches the binary map header ID, **not** the map's position or slot ID in the list. Room segment IDs are scoped to that active map, so rooms from other floors are not combined. Discovery populates the Matter room cache automatically; no `matterRooms` entries or edits to `config.json` are needed. Existing `matterRooms` entries still act as manual definitions/name overrides.
+
+For `ijai.vacuum.v18`, the same option reads rooms from the uploaded map because the local room list is incomplete. Start, pause, resume and docking work locally with `matterConnection: "local"`. To avoid MiCloud, disable discovery and provide `matterRooms` with each room's map segment `id` (1–255), `name` and active `mapId`. Use the map's segment IDs, not Xiaomi Home's long room IDs. After editing rooms, refresh discovery or update manual definitions before cleaning. See the [protocol references](ijai-v18-references.md) for map and command details.
 
 Room discovery follows `matterRoomDiscoveryInterval` (six hours by default). After a map change, the next successful refresh replaces the discovered rooms, clears the previous room selection, and publishes the new areas to Matter. The plugin does not switch the vacuum's map when selecting a room. Failed downloads, unsupported formats, or an unknown current-map ID preserve the last successful room cache. Set `matterRoomDiscovery` to `disabled` to stop both discovery paths. Models without a supported discovery interface can still use `matterRooms` to provide room IDs manually.
 
 When a robot is removed or its identity changes, the plugin moves its orphaned external Matter storage into `~/.homebridge/.miot_matter_stale` (or the equivalent Homebridge storage path). If a configured robot is removed from Homebridge's Matter accessory cache, the plugin also quarantines the old commissioned storage before publishing it again, so it returns to the external-accessory list with fresh pairing credentials. The old storage remains recoverable.
-
-#### Xiaomi Vacuum Cleaner 3C (`ijai.vacuum.v18`)
-
-Enable Matter on the Homebridge bridge running the plugin. Add these settings to the robot's existing device entry to expose one native Matter vacuum:
-
-```json
-"matterEnabled": true,
-"matterConnection": "local",
-"matterRoomDiscoveryMiCloud": true
-```
-
-Keep the local IP address and token configured. Set `micloud.country` to the robot's Xiaomi Home region, and use the plugin's existing MiCloud credentials or **Cache MiCloud session** login with `micloud.useCachedSession: true`. No separate account or session file is needed. Restart the plugin's bridge after replacing its cached session.
-
-The plugin reads room names from the uploaded active map. Start, pause, resume and docking use local MIOT, including cleaning selected rooms. Commands use the existing Matter room catalogue and check the active map locally, without downloading the map again. Map editing stays in Xiaomi Home. Mode and room selection are stored in the existing Matter room cache.
-
-For operation without MiCloud, set `matterRoomDiscovery` to `disabled` and provide `matterRooms` with each room's map segment `id` (1–255), `name` and active `mapId`. These are the short IDs from the vacuum map, not Xiaomi Home's long room IDs. Keep `matterConnection` set to `local`. After splitting or deleting rooms without changing the map ID, update manual definitions or refresh automatic discovery before using those rooms. A successful discovery refresh clears selections that no longer exist.
-
-Apple Home displays vacuum, mop and combined modes, with Quiet/Max suction and Min/Max water presets. Max suction maps to Turbo; water Min/Max maps to Low/High. Full vendor levels remain available in Xiaomi Home. No extra HomeKit switches are added by these settings.
-
-Local room start, pause, resume and docking were physically checked on firmware `4.3.3_0027`, region `cn`, including observing the robot travel to the requested room. The local command uses named MIOT inputs (`piid` and `value`); a successful reply to positional inputs does not establish that the command ran. This implementation is also tested with simulated device responses and a real offline Matter runtime. Complete room coverage, water delivery and internal cleaning progress have not been physically verified; per-room progress is not advertised.
-
-[Map format and command references](ijai-v18-references.md).
 
 ### Room cleaning
 
