@@ -8,7 +8,7 @@
   - `cloud` - Uses MiCloud only and requires MiCloud credentials or a cached session.
 - `matterHomeKitDockSwitch` - Adds a momentary HomeKit **Return to Dock** switch alongside the Matter robot. Default: `false`.
 - `matterRoomDiscovery` - `auto` or `disabled`. Default: `auto`. Tries local MIOT commands. The optional MiCloud map fallback below runs only when local discovery returns no rooms.
-- `matterRoomDiscoveryMiCloud` - Allows automatic discovery to download Dreame saved maps through MiCloud. Default: `false`. Requires a local connection for the map reference and configured MiCloud credentials or an enabled cached session. Robot control continues to use the selected connection.
+- `matterRoomDiscoveryMiCloud` allows automatic discovery to download Dreame saved maps and `ijai.vacuum.v18` maps through MiCloud. It defaults to `false`. Both need a local connection and configured MiCloud credentials or an enabled cached session. See the [IJAI v18 setup](#xiaomi-vacuum-cleaner-3c-on-matter) for the commands that also use MiCloud.
 - `matterRoomDiscoveryInterval` - How often to refresh room discovery, in hours. Default: `6`.
 - `matterRooms` - Optional room definitions or name overrides for Matter room cleaning. Each entry can contain `id`, `name`, `mapId`, and `areaType`.
 
@@ -59,6 +59,51 @@ Only the map identified by `curr_id` is used. This value matches the binary map 
 Room discovery follows `matterRoomDiscoveryInterval` (six hours by default). After a map change, the next successful refresh replaces the discovered rooms, clears the previous room selection, and publishes the new areas to Matter. The plugin does not switch the vacuum's map when selecting a room. Failed downloads, unsupported formats, or an unknown current-map ID preserve the last successful room cache. Set `matterRoomDiscovery` to `disabled` to stop both discovery paths. Models without a supported discovery interface can still use `matterRooms` to provide room IDs manually.
 
 When a robot is removed or its identity changes, the plugin moves its orphaned external Matter storage into `~/.homebridge/.miot_matter_stale` (or the equivalent Homebridge storage path). If a configured robot is removed from Homebridge's Matter accessory cache, the plugin also quarantines the old commissioned storage before publishing it again, so it returns to the external-accessory list with fresh pairing credentials. The old storage remains recoverable.
+
+#### Xiaomi Vacuum Cleaner 3C on Matter
+
+For model `ijai.vacuum.v18`, enable Matter in Homebridge 2.x and keep the robot reachable on your local network. In the plugin settings, use **Enable Matter**, set **Connection** to **Local**, and enable **Allow MiCloud map discovery** under **Advanced Matter Settings**. Over the local connection, the plugin reads robot status and settings, starts whole-home cleaning, and sends the robot to its dock. It uses MiCloud to retrieve the uploaded active map, control cleaning for selected rooms, and pause a whole-home job.
+
+Set `micloud.country` to the Xiaomi Home region where the robot is registered. Use `cn` for mainland China. Use your existing MiCloud username and password or an existing cached session with `micloud.useCachedSession` enabled. To create or refresh a cached session, use **Cache MiCloud session** in the plugin UI or the existing CLI login and session commands. Restart the Homebridge bridge that runs this plugin to load a replaced cached session. [MiCloud CLI commands](../README.md#cli)
+
+This example uses a cached session and exposes one native Matter vacuum card. Replace the example device ID, IP address, and token with your robot's values.
+
+```json
+{
+  "platform": "miot",
+  "micloud": {
+    "country": "cn",
+    "useCachedSession": true
+  },
+  "devices": [
+    {
+      "name": "Xiaomi Vacuum Cleaner 3C",
+      "model": "ijai.vacuum.v18",
+      "deviceId": "123456789",
+      "ip": "192.0.2.10",
+      "token": "YOUR_ROBOT_TOKEN",
+      "matterMode": "matter",
+      "matterConnection": "local",
+      "matterRoomDiscovery": "auto",
+      "matterRoomDiscoveryMiCloud": true
+    }
+  ]
+}
+```
+
+When the plugin reads the active map, Apple Home shows its named rooms on the vacuum card. Apple Home groups the native presets into vacuum, mop, and combined cleaning, with Quiet and Max for suction and Min and Max for water. Max suction selects the robot's Turbo level. Min and Max water select Low and High. Use Xiaomi Home for the full set of vendor levels and for map editing.
+
+Dry cleaning tests on the deployed prototype used an `ijai.vacuum.v18` with firmware `4.3.3_0027` and Xiaomi region `cn`. They covered start, pause, resume, and return to dock for one selected room and for whole-home cleaning. Apple Home displayed four rooms, cleaning modes, battery percentage, and charging status. The port to homebridge-miot 2.2.0 has been tested offline. Physical room boundaries, water delivery, and the robot's internal cleaning progress are unverified.
+
+For an offline integration check, run `npm test` from the plugin directory. With an existing Homebridge 2.4.0 installation that includes Matter 0.17.9, you can also run:
+
+```sh
+node scripts/verify-ijai-matter-runtime.cjs /absolute/path/to/homebridge
+```
+
+The script registers a real Matter endpoint with a simulated robot and rejects network access. It does not start Homebridge or send commands to a device.
+
+[IJAI map format and command references](ijai-v18-references.md)
 
 ### Room cleaning
 

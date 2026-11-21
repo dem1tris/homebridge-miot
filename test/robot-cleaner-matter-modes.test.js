@@ -9,6 +9,7 @@ function accessory(mop = false, combined = false) {
     supportsMopCleaning: () => mop,
     supportsCombinedCleaning: () => combined,
     isVacuumWorking: () => false,
+    getOperationalStateFlags: () => ({ isDocked: true }),
     isConnected: () => true,
     startCleaning: async options => starts.push(options)
   };

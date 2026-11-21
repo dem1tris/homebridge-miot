@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added opt-in MiCloud room discovery for `ijai.vacuum.v18` on Matter. It uses the plugin's existing Xiaomi login to publish rooms from the robot's active map.
+
+### Fixed
+
+- Fixed Matter room cleaning, pause, and resume for `ijai.vacuum.v18`. The Matter card also reports battery and charging status and offers presets for suction and mop water level.
+
 
 ## [2.2.0] - 2026-11-19
 ### Added

@@ -343,8 +343,10 @@ class miotDeviceController {
       // isolate Matter setup so a failure here cannot skip property polling below or take down
       // an already-registered HAP accessory (e.g. in 'both' mode).
       try {
+        this.device.configureMatterRoomSource?.(this.config);
         await this.device.initDeviceMatterAccessory(this.getMatterAccessoryUuid(), this.config, this.api, this.cachedDeviceInfo, this.restoredCachedMatterAccessory, {
-          roomCacheFile: this._getMatterRoomCacheFile()
+          roomCacheFile: this._getMatterRoomCacheFile(),
+          existingMatterStorage: await this._hasExistingMatterStorage()
         });
         const matterWrapper = this.device.getMatterAccessoryWrapper();
         const matterAccessory = matterWrapper ? matterWrapper.getMatterAccessory() : null;
@@ -498,6 +500,19 @@ class miotDeviceController {
     if (!this.matterModeWarningShown) {
       this.logger.warn(message);
       this.matterModeWarningShown = true;
+    }
+  }
+
+  async _hasExistingMatterStorage() {
+    const storage = path.join(this.api.user.storagePath(), 'matter', getExternalMatterStorageId(this.getMatterAccessoryUuid()));
+    try {
+      await fs.lstat(storage);
+      return true;
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        return false;
+      }
+      throw err;
     }
   }
 

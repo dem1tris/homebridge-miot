@@ -33,7 +33,7 @@ The goal is to add Homekit support to miot devices and make them fully controlla
 * Outlet
 * Curtain
 * Fresh Air System
-* Robot Cleaner - [Room Cleaning guide](https://github.com/merdok/homebridge-miot/blob/main/docs/robotcleaner.md)
+* Robot Cleaner - [Room Cleaning guide](docs/robotcleaner.md), including [Xiaomi Vacuum Cleaner 3C (`ijai.vacuum.v18`) on Matter](docs/robotcleaner.md#xiaomi-vacuum-cleaner-3c-on-matter)
 * Light
 * Airer
 * Oven
