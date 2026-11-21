@@ -7,8 +7,8 @@
   - `local` - Uses local MIOT only.
   - `cloud` - Uses MiCloud only and requires MiCloud credentials or a cached session.
 - `matterHomeKitDockSwitch` - Adds a momentary HomeKit **Return to Dock** switch alongside the Matter robot. Default: `false`.
-- `matterRoomDiscovery` - `auto` or `disabled`. Default: `auto`. Tries local MIOT commands. The optional MiCloud map fallback below runs only when local discovery returns no rooms.
-- `matterRoomDiscoveryMiCloud` - Allows discovery to download Dreame or IJAI v18 saved maps through MiCloud. Default: `false`. Requires a local connection for the map reference and configured MiCloud credentials or an enabled cached session. IJAI v18 also uses MiCloud for room commands and pause.
+- `matterRoomDiscovery` - `auto` or `disabled`. Default: `auto`. Tries local MIOT commands. The optional MiCloud map fallback below runs when local discovery returns no rooms. IJAI v18 uses the uploaded map instead of its incomplete local room list.
+- `matterRoomDiscoveryMiCloud` - Allows discovery to download Dreame or IJAI v18 saved maps through MiCloud. Default: `false`. Requires a local connection for the map reference and configured MiCloud credentials or an enabled cached session. IJAI v18 control commands do not require MiCloud when using a local connection.
 - `matterRoomDiscoveryInterval` - How often to refresh room discovery, in hours. Default: `6`.
 - `matterRooms` - Optional room definitions or name overrides for Matter room cleaning. Each entry can contain `id`, `name`, `mapId`, and `areaType`.
 
@@ -72,11 +72,13 @@ Enable Matter on the Homebridge bridge running the plugin. Add these settings to
 
 Keep the local IP address and token configured. Set `micloud.country` to the robot's Xiaomi Home region, and use the plugin's existing MiCloud credentials or **Cache MiCloud session** login with `micloud.useCachedSession: true`. No separate account or session file is needed. Restart the plugin's bridge after replacing its cached session.
 
-The plugin reads room names from the uploaded active map. Selected-room start, pause and resume, and whole-home pause use MiCloud. Whole-home start, resume and docking use local MIOT. Map editing stays in Xiaomi Home. A changed or removed room selection must be selected again before cleaning. Mode and room selection are stored in the existing Matter room cache.
+The plugin reads room names from the uploaded active map. Start, pause, resume and docking use local MIOT, including cleaning selected rooms. Commands use the existing Matter room catalogue and check the active map locally, without downloading the map again. Map editing stays in Xiaomi Home. Mode and room selection are stored in the existing Matter room cache.
+
+For operation without MiCloud, set `matterRoomDiscovery` to `disabled` and provide `matterRooms` with each room's map segment `id` (1–255), `name` and active `mapId`. These are the short IDs from the vacuum map, not Xiaomi Home's long room IDs. Keep `matterConnection` set to `local`. After splitting or deleting rooms without changing the map ID, update manual definitions or refresh automatic discovery before using those rooms. A successful discovery refresh clears selections that no longer exist.
 
 Apple Home displays vacuum, mop and combined modes, with Quiet/Max suction and Min/Max water presets. Max suction maps to Turbo; water Min/Max maps to Low/High. Full vendor levels remain available in Xiaomi Home. No extra HomeKit switches are added by these settings.
 
-The command mappings were physically checked on firmware `4.3.3_0027`, region `cn`, in an earlier prototype. This implementation is tested with simulated device responses and a real offline Matter runtime. Room boundaries, water delivery and internal cleaning progress have not been physically verified; per-room progress is not advertised.
+Local room start, pause, resume and docking were physically checked on firmware `4.3.3_0027`, region `cn`, including observing the robot travel to the requested room. The local command uses named MIOT inputs (`piid` and `value`); a successful reply to positional inputs does not establish that the command ran. This implementation is also tested with simulated device responses and a real offline Matter runtime. Complete room coverage, water delivery and internal cleaning progress have not been physically verified; per-room progress is not advertised.
 
 [Map format and command references](ijai-v18-references.md).
 

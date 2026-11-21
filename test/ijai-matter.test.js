@@ -6,7 +6,7 @@ const path = require('node:path');
 const MatterAccessory = require('../lib/modules/robotcleaner/RobotCleanerMatterAccessory.js');
 const logger = { info() {}, debug() {}, warn() {} };
 
-async function setup(options = {}, restored = null) {
+async function setup(options = {}, restored = null, config = {}) {
   const state = { mapId: '42', flags: {}, rooms: [{ id: '10', name: 'Kitchen', mapId: '42' }], calls: [] };
   const device = {
     getModel: () => 'ijai.vacuum.v18', getType: () => 'RobotCleaner',
@@ -29,7 +29,7 @@ async function setup(options = {}, restored = null) {
   const updates = [];
   const api = { matter: { deviceTypes: { RoboticVacuumCleaner: {} },
     updateAccessoryState: async (_id, cluster, values) => updates.push([cluster, values]) } };
-  const wrapper = new MatterAccessory('Robot', device, 'test-vacuum', {}, api, logger, {}, restored, options);
+  const wrapper = new MatterAccessory('Robot', device, 'test-vacuum', config, api, logger, {}, restored, options);
   await wrapper.init();
   return { wrapper, state, device, updates, api };
 }
@@ -63,6 +63,23 @@ test('existing room cache restores mode and room selection after restart', async
   assert.deepEqual(next.wrapper.selectedAreaIds, [10]);
   await next.wrapper.handleRunModeChange(1);
   assert.equal(next.state.calls[0][0], 'rooms');
+});
+
+test('manual rooms work without discovery and reject unknown Matter areas', async () => {
+  const { wrapper, state, device } = await setup({}, null, {
+    matterRoomDiscovery: 'disabled',
+    matterRooms: [{ id: '11', name: 'Study', mapId: '42' }]
+  });
+  device.discoverRooms = async () => { throw Error('Cloud unavailable'); };
+  assert.equal(wrapper._shouldDiscoverRooms(), false);
+  await assert.rejects(wrapper.handleSelectAreas({ newAreas: [99] }), /not known/i);
+  assert.deepEqual(state.calls, []);
+  await wrapper.handleSelectAreas({ newAreas: [11] });
+  await wrapper.handleRunModeChange(1);
+  await wrapper.handlePause();
+  await wrapper.handleResume();
+  assert.deepEqual(state.calls.map(call => call[0]), ['rooms', 'pause', 'resume']);
+  assert.deepEqual(state.calls[0], ['rooms', ['11'], { vacuum: true, mop: false, mapId: '42' }]);
 });
 
 test('changed or removed rooms require selection again instead of starting the whole home', async () => {
