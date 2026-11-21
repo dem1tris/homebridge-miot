@@ -129,3 +129,45 @@ test('signed map downloads omit account cookies, bound file size and hide signed
   cloud.request = async () => ({ code: -38, result: null });
   await assert.rejects(cloud.getInterimFile('test/map'), /configured MiCloud country and session/);
 });
+
+test('standard session callbacks preserve local control and configured region', async t => {
+  const device = localDevice({ country: 'cn', useCachedSession: true, unencryptedRequests: true });
+  const original = device.miCloud;
+  t.mock.method(MiCloud.prototype, 'login', () => assert.fail('reuse cached session'));
+  const value = await device.withMiCloudSession(cloud => {
+    assert.equal(cloud.country, 'cn');
+    assert.equal(cloud.useUnencryptedRequests, true);
+    assert.equal(cloud.serviceToken, token.serviceToken);
+    return 'result';
+  });
+  assert.equal(value, 'result');
+  assert.equal(device.miCloud, original);
+  assert.equal(device.localConnected, true);
+  device.disableMiCloud();
+  await assert.rejects(device.withMiCloudSession(() => assert.fail('disabled')));
+});
+
+test('IJAI operations retain the existing expired-session refresh', async t => {
+  const device = localDevice({ username: 'user', password: 'password', useCachedSession: true });
+  let logins = 0;
+  t.mock.method(MiCloud.prototype, 'login', async function() {
+    logins++;
+    this.setServiceToken({ ...token, serviceToken: 'fresh' });
+  });
+  device._saveReachabilitySession = async () => {};
+  const result = await device.withMiCloudSession(cloud => {
+    if (cloud.serviceToken !== 'fresh') throw Error('expired session');
+    return 'ok';
+  });
+  assert.equal(result, 'ok');
+  assert.equal(logins, 1);
+});
+
+test('IJAI pro map lookup reuses the existing downloader', async t => {
+  const cloud = new MiCloud(logger);
+  t.mock.method(cloud, 'request', async route => {
+    assert.equal(route, '/v2/home/get_interim_file_url_pro');
+    return { code: -1 };
+  });
+  await assert.rejects(cloud.getInterimFile('123/456/0', true), /map lookup failed/);
+});

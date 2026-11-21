@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed IJAI v18 Matter room discovery, cleaning modes, pause and resume using the existing MiCloud transport. Mode and room selection now survive restarts.
+
+
 
 ## [2.2.0] - 2026-11-19
 ### Added

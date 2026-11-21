@@ -343,6 +343,7 @@ class miotDeviceController {
       // isolate Matter setup so a failure here cannot skip property polling below or take down
       // an already-registered HAP accessory (e.g. in 'both' mode).
       try {
+        this.device.configureMatterRoomSource?.(this.config);
         await this.device.initDeviceMatterAccessory(this.getMatterAccessoryUuid(), this.config, this.api, this.cachedDeviceInfo, this.restoredCachedMatterAccessory, {
           roomCacheFile: this._getMatterRoomCacheFile()
         });

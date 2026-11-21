@@ -248,7 +248,7 @@
             },
             "matterRoomDiscoveryMiCloud": {
               "title": "Allow MiCloud map discovery",
-              "description": "Robot Cleaner only. Allows automatic discovery to download Dreame saved maps with the configured MiCloud credentials or cached session. Only rooms from the current map are exposed. Set the MiCloud country to the region used in Xiaomi Home. Robot control stays on the selected connection.",
+              "description": "Robot Cleaner only. Allows automatic discovery to download Dreame or IJAI v18 saved maps with the configured MiCloud credentials or cached session. Only rooms from the current map are exposed. Set the MiCloud country to the region used in Xiaomi Home. IJAI v18 also uses MiCloud for room commands and pause.",
               "type": "boolean",
               "default": false,
               "required": false
